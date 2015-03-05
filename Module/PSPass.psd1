@@ -58,7 +58,7 @@ FormatsToProcess = @()
 NestedModules = @()
 
 # Functions to export from this module
-FunctionsToExport = '*'
+FunctionsToExport = 'Show-Credentials'
 
 # Cmdlets to export from this module
 CmdletsToExport = '*'
