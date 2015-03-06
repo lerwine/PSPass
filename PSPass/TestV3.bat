@@ -1,0 +1,1 @@
+powershell -ExecutionPolicy Bypass -File ".\Module.test.ps1"

@@ -1,4 +1,5 @@
 $Script:LastLocalBackup = $null;
+$Script:CurrentLocation = '/';
 
 Function Get-AppDataPath {
     Param(
@@ -19,7 +20,7 @@ Function Get-PSPassDrive {
     
     if ($Script:PSPassDrive -eq $null) {
         $PSProvider = Get-PSProvider -PSProvider:'FileSystem';
-        $CredentialsStoragePath = Get-CredentialsStoragePath;
+        $CredentialsStoragePath = Get-AppDataPath;
         $Script:PSPassDrive = Get-PSDrive | Where-Object { $_.Name -eq 'PSPass' };
         if ($Script:PSPassDrive -ne $null) {
             if ($_.Provider -ne $PSProvider -or $_.Root -ne $CredentialsStoragePath) {
@@ -30,7 +31,7 @@ Function Get-PSPassDrive {
         }
 
         if ($Script:PSPassDrive -eq $null) {
-            $Script:PSPassDrive = New-PSDrive -Name:'PSPass' -PSProvider:FileSystem -Root:(Get-CredentialsStoragePath) -Description "Maps to the credentials storage location.";
+            $Script:PSPassDrive = New-PSDrive -Name:'PSPass' -PSProvider:FileSystem -Root:$CredentialsStoragePath -Description 'Maps to the credentials storage location.' -Scope:'Script';
         }
     }
     
@@ -111,46 +112,75 @@ Function ConvertFrom-SafeFileName {
     }
 }
 
-Function ConvertTo-LiteralPath {
+Function Get-PSPassLocation {
+    [CmdletBinding()]
+    Param()
+
+    $Script:CurrentLocation | ConvertFrom-SafeFileName | Write-Output;
+}
+
+Function New-PSPassFolder {
+    [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true, Position = 0)]
-        [AllowNull()]
-        [AllowEmptyString()]
         [string]$Path
     )
     
-    $PSPassDrive = Get-PSPassDrive;
-    $Root = $PSPassDrive.Root;
-    if ($Path -eq $null -or $Path -eq '') {
-        if ($PSPassDrive.CurrentLocation -ne $null -and $PSPassDrive.CurrentLocation.Length -gt 0) {
-            $Root | Join-Path -ChildPath:($PSPassDrive.CurrentLocation) | Write-Output;
+    $PSDrive = Get-PSPassDrive;
+    $Location = '{0}:\' -f $PSDrive.Name;
+    Push-Location -Path:$Location;
+    
+    $SafeFileName = $Path | ConvertTo-SafeFileName -AllowExtension -IgnorePathSeparatorChars;
+
+    Try {
+        $Item = $null;
+        if ([System.IO.Path]::IsPathRooted($SafeFileName)) {
+            $Item = New-Item -Path:($Location | Join-Path -ChildPath:$SafeFileName) -ItemType:Directory -ErrorAction:Stop;
         } else {
-            $Root | Write-Output;
+            $Item = New-Item -Path:($Location | Join-Path -ChildPath:($Script:CurrentLocation) | Join-Path -ChildPath:$SafeFileName) -ItemType:Directory -ErrorAction:Stop;
         }
-    } else {
-        if ([System.IO.Path]::IsPathRooted($Path)) {
-            $Root | Join-Path -ChildPath:(ConvertTo-SafeFileName -Path:$Path -IgnorePathSeparatorChars) | Write-Output;
-        } else {
-            if ($PSPassDrive.CurrentLocation -ne $null -and $PSPassDrive.CurrentLocation.Length -gt 0) {
-                $Root | Join-Path -ChildPath:(ConvertTo-SafeFileName -Path:$Path -IgnorePathSeparatorChars) | Write-Output;
-            } else {
-                ($Root | Join-Path -ChildPath:($PSPassDrive.CurrentLocation)) | Join-Path -ChildPath:(ConvertTo-SafeFileName -Path:$Path -IgnorePathSeparatorChars) | Write-Output;
-            }
+        if ($Item -ne $null) {
+            $Item.FullName.Substring($Item.PSDrive.Root.Length) | ConvertFrom-SafeFileName | Write-Output;
         }
+    } Catch {
+        throw;
+    } Finally {
+        Pop-Location;
     }
 }
 
-Function Show-Credentials {
+Function Set-PSPassLocation {
     [CmdletBinding()]
     Param(
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetname = "Relative")]
+        [Parameter(Mandatory = $true, Position = 0)]
+        [string]$Path
+    )
+    
+    $PSDrive = Get-PSPassDrive;
+    $Location = '{0}:\' -f $PSDrive.Name;
+    Push-Location -Path:$Location;
+    $SafeFileName = $Path | ConvertTo-SafeFileName -AllowExtension -IgnorePathSeparatorChars;
+
+    Try {
+        if ([System.IO.Path]::IsPathRooted($Path)) {
+            Set-Location -Path:($Location = $Location | Join-Path -ChildPath:($SafeFileName)) -ErrorAction:Stop;
+        } else {
+            Set-Location -Path:($Location = $Location | Join-Path -ChildPath:($Script:CurrentLocation) | Join-Path -ChildPath:($SafeFileName)) -ErrorAction:Stop;
+        }
+        $Script:CurrentLocation = (Get-Location).Path.Substring($PSDrive.Name.Length + 1);
+        $Script:CurrentLocation | ConvertFrom-SafeFileName | Write-Output;
+    } Catch {
+        throw;
+    } Finally {
+        Pop-Location;
+    }
+}
+
+Function Get-Credentials {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $false, Position = 0)]
         [string]$Path,
-        
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetname = "Literal")]
-        [string]$LiteralPath,
-        
-        [Parameter(Mandatory = $false, Position = 1)]
-        [string]$Indent = "",
         
         [switch]$Recursive
     )

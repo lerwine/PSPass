@@ -28,11 +28,14 @@
   </PropertyGroup>
   <ItemGroup />
   <ItemGroup>
+    <Compile Include="CustomTypes.ps1" />
     <Compile Include="Install.bat" />
     <Compile Include="Install.ps1" />
     <Compile Include="PSPass.psd1" />
     <Compile Include="PSPass.psm1" />
     <Compile Include="Module.test.ps1" />
+    <Compile Include="TestV2.bat" />
+    <Compile Include="TestV3.bat" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" />
