@@ -19,7 +19,15 @@ namespace PSPassCustomTypes
                 if (PathConverter._trimTrailingSlashRegex == null)
                 {
                     string p = Regex.Escape(new String(new char[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }));
-                    PathConverter._trimTrailingSlashRegex = new Regex(String.Format(@"^(?<p>.*[^{0}])\s*[{0}]+\s*$", p), RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                    PathConverter._trimTrailingSlashRegex = new Regex(String.Format(@"
+                (?# IF has trailing separator ) (? (?= [^{0}] [{0}]+ \s* $)
+          (?# Match all to last non-separator )     ^ .* [^{0}]
+(?# Ignore separators and trailing whitespace )     (?: [{0}]+ \s* $ )
+                                     (?# else ) |
+         (?# Get leading whitespace and slash )     ^ \s* [{0}]
+(?# Ignore separators and trailing whitespace )     (?: [{0}]+ \s* $ )
+                                 (?# End if ) )
+                        ", p), RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
                 }
 
                 return PathConverter._trimTrailingSlashRegex;
@@ -33,7 +41,7 @@ namespace PSPassCustomTypes
             get
             {
                 if (PathConverter._escapeSequenceRegex == null)
-                    PathConverter._escapeSequenceRegex = new Regex(@"_0x(?<hex>[\da-f]{2})_", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                    PathConverter._escapeSequenceRegex = new Regex(@"(?:_0x)[\da-f]{2}(?:_)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
                 return PathConverter._escapeSequenceRegex;
             }
@@ -48,7 +56,16 @@ namespace PSPassCustomTypes
                 if (PathConverter._normalizeFromUserPathRegex == null)
                 {
                     string p = Regex.Escape(new String(new char[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }));
-                    PathConverter._normalizeFromUserPathRegex = new Regex(String.Format(@"(?(?=\s*[{0}])\s*[{0}]+\s*|[{0}]+\s+)", p), RegexOptions.Compiled);
+                    PathConverter._normalizeFromUserPathRegex = new Regex(String.Format(@"
+   (?# if)  (? (?= [^{0}]* [{0}]+ \s+ [{0}] )
+ (?# then)         [^{0}]* (?:[{0}]*) [{0}] (?\s*) \s (?=[{0}])
+ (?# else)  |
+       (?# if)  (? (?= [^{0}]* [{0}]+ \s+ [{0}] )
+     (?# then)         [^{0}]* (?:[{0}]*) [{0}] (?\s*) \s (?=[{0}])
+     (?# else)  |
+    (?# endif)  )
+(?# endif)  )
+", p), RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
                 }
 
                 return PathConverter._normalizeFromUserPathRegex;

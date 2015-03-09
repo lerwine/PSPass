@@ -44,8 +44,22 @@
     <Compile Include="PathConverter.cs" />
     <Compile Include="PSLogin.cs" />
     <Compile Include="PSPassFolder.cs" />
+    <Compile Include="RegexPatterns.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>RegexPatterns.resx</DependentUpon>
+    </Compile>
     <Compile Include="Utility.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="RegexPatterns.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>RegexPatterns.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\PathWhitespaceNormaliztion.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
